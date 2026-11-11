@@ -62,6 +62,9 @@ export async function POST(req: NextRequest) {
             { id: 'ticket' },
             { id: 'atm' },
           ],
+          excluded_payment_methods: [
+            { id: 'prepaid_card' },
+          ],
           installments: 1,
         },
       }),
