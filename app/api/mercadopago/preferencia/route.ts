@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const PLANOS: Record<string, { titulo: string; valor: number }> = {
   mensal: { titulo: 'OrçaPro Digital — Mensal', valor: 49.9 },
-  anual: { titulo: 'OrçaPro Digital — Anual', valor: 399.0 },
+  anual: { titulo: 'OrçaPro Digital — Anual', valor: 499.99 },
 }
 
 export async function POST(req: NextRequest) {
@@ -55,6 +55,15 @@ export async function POST(req: NextRequest) {
         },
         auto_return: 'approved',
         notification_url: `${appUrl}/api/mercadopago/webhook`,
+        payment_methods: {
+          excluded_payment_types: [
+            { id: 'credit_card' },
+            { id: 'debit_card' },
+            { id: 'ticket' },
+            { id: 'atm' },
+          ],
+          installments: 1,
+        },
       }),
     })
 
