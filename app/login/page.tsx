@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { verificarTrial } from "@/lib/trial";
 
 export default function Login() {
   const router = useRouter();
@@ -11,6 +12,39 @@ export default function Login() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+
+  async function irParaPagamento() {
+    const plano = localStorage.getItem("plano_escolhido") || "mensal";
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/bloqueado");
+        return;
+      }
+
+      const resposta = await fetch("/api/mercadopago/preferencia", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plano }),
+      });
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok || !dados.init_point) {
+        router.push("/bloqueado");
+        return;
+      }
+
+      localStorage.removeItem("plano_escolhido");
+      window.location.href = dados.init_point;
+    } catch {
+      router.push("/bloqueado");
+    }
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -22,13 +56,21 @@ export default function Login() {
       password: senha,
     });
 
-    setCarregando(false);
-
     if (error) {
+      setCarregando(false);
       setErro("E-mail ou senha incorretos.");
       return;
     }
 
+    const trial = await verificarTrial();
+
+    if (trial.expirado) {
+      await irParaPagamento();
+      setCarregando(false);
+      return;
+    }
+
+    setCarregando(false);
     router.push("/dashboard");
   }
 

@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const router = useRouter();
+
+  function escolherPlano(plano: "mensal" | "anual") {
+    localStorage.setItem("plano_escolhido", plano);
+    router.push("/cadastro");
+  }
+
   return (
     <div className="min-h-screen bg-[#FDFBF8] text-[#1A1A1A]">
       {/* HEADER */}
@@ -190,10 +200,14 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/cadastro" className="block text-center mt-8 py-3 rounded-lg border border-[#1A1A1A] font-medium hover:bg-[#1A1A1A] hover:text-white transition">
+              <button
+                onClick={() => escolherPlano("mensal")}
+                className="block w-full text-center mt-8 py-3 rounded-lg border border-[#1A1A1A] font-medium hover:bg-[#1A1A1A] hover:text-white transition"
+              >
                 Começar agora
-              </Link>
+              </button>
             </div>
+
             <div className="border-2 border-[#C2410C] rounded-2xl p-8 relative bg-[#FDFBF8]">
               <span className="absolute -top-3 left-8 bg-[#C2410C] text-white text-[11px] font-medium px-3 py-1 rounded-full">
                 Mais popular
@@ -215,9 +229,12 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link href="/cadastro" className="block text-center mt-8 py-3 rounded-lg bg-[#C2410C] text-white font-medium hover:bg-[#9A3412] transition">
+              <button
+                onClick={() => escolherPlano("anual")}
+                className="block w-full text-center mt-8 py-3 rounded-lg bg-[#C2410C] text-white font-medium hover:bg-[#9A3412] transition"
+              >
                 Começar agora
-              </Link>
+              </button>
             </div>
           </div>
         </div>

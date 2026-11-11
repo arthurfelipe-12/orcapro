@@ -13,6 +13,45 @@ export default function Cadastro() {
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
 
+  async function irParaPagamento() {
+    const plano = localStorage.getItem("plano_escolhido");
+    if (!plano) {
+      router.push("/dashboard");
+      return;
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        router.push("/dashboard");
+        return;
+      }
+
+      const resposta = await fetch("/api/mercadopago/preferencia", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ plano }),
+      });
+
+      const dados = await resposta.json();
+
+      if (!resposta.ok || !dados.init_point) {
+        localStorage.removeItem("plano_escolhido");
+        router.push("/dashboard");
+        return;
+      }
+
+      localStorage.removeItem("plano_escolhido");
+      window.location.href = dados.init_point;
+    } catch {
+      localStorage.removeItem("plano_escolhido");
+      router.push("/dashboard");
+    }
+  }
+
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
@@ -51,8 +90,8 @@ export default function Cadastro() {
       }
     }
 
+    await irParaPagamento();
     setCarregando(false);
-    router.push("/dashboard");
   }
 
   return (
