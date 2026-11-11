@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -37,7 +37,7 @@ type Item = {
   custo_material: number | null;
 };
 
-export default function DetalheOrcamento() {
+function DetalheOrcamentoConteudo() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -110,7 +110,6 @@ export default function DetalheOrcamento() {
 
   async function mudarStatus(novo: string) {
     if (!orcamento) return;
-
     const { error } = await supabase
       .from("orcamentos")
       .update({ status: novo })
@@ -120,7 +119,6 @@ export default function DetalheOrcamento() {
       setErro(error.message);
       return;
     }
-
     setOrcamento({ ...orcamento, status: novo });
   }
 
@@ -129,7 +127,6 @@ export default function DetalheOrcamento() {
     if (!confirm("Excluir este orçamento? Essa ação não pode ser desfeita.")) return;
 
     setExcluindo(true);
-
     await supabase.from("itens_orcamento").delete().eq("orcamento_id", orcamento.id);
     const { error } = await supabase.from("orcamentos").delete().eq("id", orcamento.id);
 
@@ -138,7 +135,6 @@ export default function DetalheOrcamento() {
       setErro(error.message);
       return;
     }
-
     router.push("/orcamentos/lista");
   }
 
@@ -220,9 +216,7 @@ export default function DetalheOrcamento() {
               {orcamento.clientes?.nome || "Sem cliente"} · {dataBR(orcamento.created_at)}
             </p>
           </div>
-          <span
-            className={`text-xs font-medium px-3 py-1 rounded-full border shrink-0 ${statusCor}`}
-          >
+          <span className={`text-xs font-medium px-3 py-1 rounded-full border shrink-0 ${statusCor}`}>
             {statusRotulo}
           </span>
         </div>
@@ -244,7 +238,6 @@ export default function DetalheOrcamento() {
 
         <section className="bg-white border border-[#EDE7DF] rounded-2xl p-5 mb-4">
           <h2 className="font-semibold text-[#1A1A1A] mb-3">Itens</h2>
-
           {itens.length === 0 ? (
             <p className="text-sm text-[#5A5A5A]">Nenhum item cadastrado.</p>
           ) : (
@@ -268,7 +261,6 @@ export default function DetalheOrcamento() {
               ))}
             </div>
           )}
-
           <div className="mt-4 pt-3 border-t border-[#F2EDE6] flex justify-between">
             <span className="text-sm text-[#5A5A5A]">Total</span>
             <strong className="text-lg text-[#1A1A1A]">{moeda(orcamento.valor_total)}</strong>
@@ -280,30 +272,20 @@ export default function DetalheOrcamento() {
           <p className="text-xs text-[#5A5A5A] mb-3">
             Só você vê. Não aparece no PDF do cliente.
           </p>
-
           <div className="space-y-1 text-sm">
             <div className="flex justify-between text-[#5A5A5A]">
               <span>Custo total</span>
               <span>{moeda(custoInterno)}</span>
             </div>
-            <div
-              className={`flex justify-between font-medium ${
-                lucro >= 0 ? "text-green-700" : "text-red-600"
-              }`}
-            >
+            <div className={`flex justify-between font-medium ${lucro >= 0 ? "text-green-700" : "text-red-600"}`}>
               <span>Lucro real</span>
               <span>{moeda(lucro)}</span>
             </div>
-            <div
-              className={`flex justify-between font-medium ${
-                margemBaixa ? "text-red-600" : "text-green-700"
-              }`}
-            >
+            <div className={`flex justify-between font-medium ${margemBaixa ? "text-red-600" : "text-green-700"}`}>
               <span>Margem real</span>
               <span>{margem.toFixed(1)}%</span>
             </div>
           </div>
-
           {margemBaixa && (
             <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               <p className="text-sm text-red-700 font-medium">
@@ -365,7 +347,6 @@ export default function DetalheOrcamento() {
               itens: itens,
             }}
           />
-
           <BotaoWhatsApp
             dados={{
               cliente: orcamento.clientes?.nome || "Cliente",
@@ -377,7 +358,6 @@ export default function DetalheOrcamento() {
               forma_pagamento: orcamento.forma_pagamento,
             }}
           />
-
           <select
             value={orcamento.status || "pendente"}
             onChange={(e) => mudarStatus(e.target.value)}
@@ -387,7 +367,6 @@ export default function DetalheOrcamento() {
             <option value="aprovado">Aprovado</option>
             <option value="recusado">Recusado</option>
           </select>
-
           <button
             type="button"
             onClick={excluir}
@@ -396,7 +375,6 @@ export default function DetalheOrcamento() {
           >
             {excluindo ? "Excluindo..." : "Excluir"}
           </button>
-
           <Link
             href="/orcamentos/lista"
             className="ml-auto border border-[#D9D2C8] text-[#5A5A5A] text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-white transition"
@@ -406,5 +384,19 @@ export default function DetalheOrcamento() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DetalheOrcamento() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FDFBF8] flex items-center justify-center">
+          <p className="text-sm text-[#5A5A5A]">Carregando...</p>
+        </div>
+      }
+    >
+      <DetalheOrcamentoConteudo />
+    </Suspense>
   );
 }
