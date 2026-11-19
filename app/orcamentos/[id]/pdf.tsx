@@ -10,6 +10,7 @@ type Item = {
   unidade: string;
   valor_unitario: number;
   valor_total: number;
+  material_incluso?: boolean | null;
 };
 
 type Dados = {
@@ -25,6 +26,8 @@ type Dados = {
   empresa: string;
   logoUrl: string | null;
   itens: Item[];
+  desconto_tipo?: "valor" | "percentual" | null;
+  desconto_valor?: number | null;
 };
 
 export default function BotaoPdf({ dados }: { dados: Dados }) {
@@ -32,6 +35,23 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
 
   const moeda = (v: number) =>
     Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Subtotal, desconto e total
+  const subtotal = dados.itens.reduce(
+    (soma, i) => soma + Number(i.valor_total || 0),
+    0
+  );
+
+  const desconto = (() => {
+    const bruto = Number(dados.desconto_valor || 0);
+    if (!bruto || bruto <= 0) return 0;
+    if (dados.desconto_tipo === "percentual") {
+      return Math.min((subtotal * bruto) / 100, subtotal);
+    }
+    return Math.min(bruto, subtotal);
+  })();
+
+  const totalFinal = subtotal - desconto;
 
   async function gerar() {
     setGerando(true);
@@ -47,10 +67,20 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
     container.style.color = "#1A1A1A";
 
     const linhasItens = dados.itens
-      .map(
-        (i) => `
+      .map((i) => {
+        const material =
+          i.material_incluso === true
+            ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F0FDF4;color:#15803D;font-size:10px;font-weight:bold;">Material incluso</span>`
+            : i.material_incluso === false
+            ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F5F5F5;color:#666;font-size:10px;font-weight:bold;">Só mão de obra</span>`
+            : "";
+
+        return `
         <tr>
-          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;">${i.descricao}</td>
+          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;">
+            ${i.descricao}
+            ${material ? `<div style="margin-top:4px;">${material}</div>` : ""}
+          </td>
           <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:center;">${Number(
             i.quantidade
           )} ${i.unidade}</td>
@@ -60,8 +90,8 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
           <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:right;font-weight:bold;">${moeda(
             i.valor_total
           )}</td>
-        </tr>`
-      )
+        </tr>`;
+      })
       .join("");
 
     const condicoes = [
@@ -78,6 +108,27 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
         ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Garantia:</strong> ${dados.garantia}</p>`
         : "",
     ].join("");
+
+    const blocoTotais =
+      desconto > 0
+        ? `
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:6px;">
+            <span>Subtotal</span>
+            <span>${moeda(subtotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#C2410C;margin-bottom:8px;">
+            <span>Desconto${dados.desconto_tipo === "percentual" ? ` (${Number(dados.desconto_valor)}%)` : ""}</span>
+            <span>- ${moeda(desconto)}</span>
+          </div>
+          <div style="border-top:1px solid #EDE7DF;padding-top:8px;display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
+            <span>Total</span>
+            <span>${moeda(totalFinal)}</span>
+          </div>`
+        : `
+          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
+            <span>Total</span>
+            <span>${moeda(totalFinal)}</span>
+          </div>`;
 
     container.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #C2410C;padding-bottom:20px;margin-bottom:28px;">
@@ -123,11 +174,8 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
       </table>
 
       <div style="display:flex;justify-content:flex-end;margin-bottom:28px;">
-        <div style="min-width:240px;background:#FDFBF8;border:1px solid #EDE7DF;border-radius:8px;padding:14px 18px;">
-          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
-            <span>Total</span>
-            <span>${moeda(dados.valor_total)}</span>
-          </div>
+        <div style="min-width:260px;background:#FDFBF8;border:1px solid #EDE7DF;border-radius:8px;padding:14px 18px;">
+          ${blocoTotais}
         </div>
       </div>
 

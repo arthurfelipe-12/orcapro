@@ -35,7 +35,6 @@ function paraNumero(texto: string): number {
 
 export default function NovoOrcamento() {
   const router = useRouter();
-
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -53,6 +52,9 @@ export default function NovoOrcamento() {
   const [formaPagamento, setFormaPagamento] = useState("");
   const [garantia, setGarantia] = useState("");
 
+  const [descontoTipo, setDescontoTipo] = useState<"valor" | "percentual">("valor");
+  const [descontoValor, setDescontoValor] = useState("");
+
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
 
   useEffect(() => {
@@ -65,12 +67,10 @@ export default function NovoOrcamento() {
       router.push("/login");
       return;
     }
-
     const { data } = await supabase
       .from("clientes")
       .select("id, nome")
       .order("nome");
-
     setClientes(data || []);
   }
 
@@ -94,11 +94,18 @@ export default function NovoOrcamento() {
 
   const precoCliente = totalItens > 0 ? totalItens : custoTotal;
 
-  const lucro = precoCliente - custoTotal;
+  // Desconto
+  const descontoBruto = paraNumero(descontoValor);
+  const descontoAplicado =
+    descontoTipo === "percentual"
+      ? Math.min((precoCliente * descontoBruto) / 100, precoCliente)
+      : Math.min(descontoBruto, precoCliente);
 
-  const margemReal = precoCliente > 0 ? (lucro / precoCliente) * 100 : 0;
+  const totalComDesconto = precoCliente - descontoAplicado;
 
-  const margemBaixa = precoCliente > 0 && margemReal < 20;
+  const lucro = totalComDesconto - custoTotal;
+  const margemReal = totalComDesconto > 0 ? (lucro / totalComDesconto) * 100 : 0;
+  const margemBaixa = totalComDesconto > 0 && margemReal < 20;
 
   // ---- Handlers ----
   function atualizarItem(
@@ -128,14 +135,12 @@ export default function NovoOrcamento() {
       setErro("Selecione o cliente do orçamento.");
       return;
     }
-
     if (!titulo.trim()) {
       setErro("Preencha o título do orçamento.");
       return;
     }
 
     const itensValidos = itens.filter((i) => i.descricao.trim());
-
     if (itensValidos.length === 0) {
       setErro("Adicione pelo menos um item com descrição.");
       return;
@@ -179,7 +184,9 @@ export default function NovoOrcamento() {
         custo_indireto: paraNumero(custoIndireto),
         custo_interno: Number(custoTotal.toFixed(2)),
         margem_percentual: Number(margemReal.toFixed(2)),
-        valor_total: Number(precoCliente.toFixed(2)),
+        valor_total: Number(totalComDesconto.toFixed(2)),
+        desconto_tipo: descontoAplicado > 0 ? descontoTipo : null,
+        desconto_valor: descontoAplicado > 0 ? descontoBruto : 0,
         validade_dias: paraNumero(validade) || 15,
         prazo_execucao: prazoExecucao.trim() || null,
         forma_pagamento: formaPagamento.trim() || null,
@@ -219,7 +226,6 @@ export default function NovoOrcamento() {
 
   const campo =
     "w-full border border-[#D9D2C8] rounded-lg px-3 py-2 text-sm text-[#1A1A1A] focus:outline-none focus:border-[#C2410C]";
-
   const moeda = (v: number) =>
     v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -359,7 +365,6 @@ export default function NovoOrcamento() {
               {itens.map((item, i) => {
                 const totalItem =
                   paraNumero(item.quantidade) * paraNumero(item.valor_unitario);
-
                 return (
                   <div key={i} className="border border-[#F2EDE6] rounded-lg p-3 space-y-3">
                     <div className="flex items-center justify-between">
@@ -449,7 +454,6 @@ export default function NovoOrcamento() {
                           <option value="nao">Não, só mão de obra</option>
                         </select>
                       </div>
-
                       {item.material_incluso && (
                         <div className="col-span-6">
                           <label className="block text-xs font-medium text-[#1A1A1A] mb-1">
@@ -607,6 +611,57 @@ export default function NovoOrcamento() {
                 <span>{margemReal.toFixed(1)}%</span>
               </div>
             </div>
+
+            {/* DESCONTO */}
+            <div className="mt-4 pt-3 border-t border-[#F2EDE6]">
+              <p className="text-xs font-semibold text-[#1A1A1A] mb-2">
+                Desconto para o cliente
+              </p>
+              <div className="grid grid-cols-12 gap-2">
+                <div className="col-span-5">
+                  <select
+                    value={descontoTipo}
+                    onChange={(e) =>
+                      setDescontoTipo(e.target.value as "valor" | "percentual")
+                    }
+                    className={campo}
+                  >
+                    <option value="valor">Valor em R$</option>
+                    <option value="percentual">Percentual %</option>
+                  </select>
+                </div>
+                <div className="col-span-7">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={descontoValor}
+                    onChange={(e) => setDescontoValor(e.target.value)}
+                    placeholder={descontoTipo === "percentual" ? "Ex: 10" : "Ex: 160,00"}
+                    className={campo}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-[#5A5A5A] mt-1">
+                Aparece no PDF como Subtotal, Desconto e Total. Deixe vazio se não houver.
+              </p>
+            </div>
+
+            {descontoAplicado > 0 && (
+              <div className="mt-3 bg-[#FDFBF8] border border-[#EDE7DF] rounded-lg px-3 py-2 space-y-1 text-sm">
+                <div className="flex justify-between text-[#5A5A5A]">
+                  <span>Subtotal</span>
+                  <span>{moeda(precoCliente)}</span>
+                </div>
+                <div className="flex justify-between text-[#C2410C]">
+                  <span>Desconto</span>
+                  <span>- {moeda(descontoAplicado)}</span>
+                </div>
+                <div className="flex justify-between font-bold text-[#1A1A1A] pt-1 border-t border-[#EDE7DF]">
+                  <span>Total ao cliente</span>
+                  <span>{moeda(totalComDesconto)}</span>
+                </div>
+              </div>
+            )}
 
             {margemBaixa && (
               <div className="mt-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
