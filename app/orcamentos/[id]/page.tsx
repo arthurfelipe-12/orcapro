@@ -23,6 +23,8 @@ type Orcamento = {
   garantia: string | null;
   status: string | null;
   created_at: string;
+  desconto_tipo: string | null;
+  desconto_valor: number | null;
   clientes: Cliente | null;
 };
 
@@ -69,7 +71,7 @@ function DetalheOrcamentoConteudo() {
     const { data: orc, error } = await supabase
       .from("orcamentos")
       .select(
-        "id, titulo, escopo, descricao, valor_total, custo_interno, margem_percentual, validade_dias, prazo_execucao, forma_pagamento, garantia, status, created_at, clientes(nome)"
+        "id, titulo, escopo, descricao, valor_total, custo_interno, margem_percentual, validade_dias, prazo_execucao, forma_pagamento, garantia, status, created_at, desconto_tipo, desconto_valor, clientes(nome)"
       )
       .eq("id", id)
       .single();
@@ -238,6 +240,7 @@ function DetalheOrcamentoConteudo() {
 
         <section className="bg-white border border-[#EDE7DF] rounded-2xl p-5 mb-4">
           <h2 className="font-semibold text-[#1A1A1A] mb-3">Itens</h2>
+
           {itens.length === 0 ? (
             <p className="text-sm text-[#5A5A5A]">Nenhum item cadastrado.</p>
           ) : (
@@ -261,9 +264,44 @@ function DetalheOrcamentoConteudo() {
               ))}
             </div>
           )}
-          <div className="mt-4 pt-3 border-t border-[#F2EDE6] flex justify-between">
-            <span className="text-sm text-[#5A5A5A]">Total</span>
-            <strong className="text-lg text-[#1A1A1A]">{moeda(orcamento.valor_total)}</strong>
+
+          <div className="mt-4 pt-3 border-t border-[#F2EDE6] space-y-1">
+            {Number(orcamento.desconto_valor || 0) > 0 && (
+              <>
+                <div className="flex justify-between text-sm text-[#5A5A5A]">
+                  <span>Subtotal</span>
+                  <span>
+                    {moeda(
+                      itens.reduce((s, i) => s + Number(i.valor_total || 0), 0)
+                    )}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm text-[#C2410C]">
+                  <span>
+                    Desconto
+                    {orcamento.desconto_tipo === "percentual"
+                      ? ` (${Number(orcamento.desconto_valor)}%)`
+                      : ""}
+                  </span>
+                  <span>
+                    -{" "}
+                    {moeda(
+                      orcamento.desconto_tipo === "percentual"
+                        ? (itens.reduce((s, i) => s + Number(i.valor_total || 0), 0) *
+                            Number(orcamento.desconto_valor)) /
+                            100
+                        : Number(orcamento.desconto_valor)
+                    )}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between">
+              <span className="text-sm text-[#5A5A5A]">Total</span>
+              <strong className="text-lg text-[#1A1A1A]">
+                {moeda(orcamento.valor_total)}
+              </strong>
+            </div>
           </div>
         </section>
 
@@ -345,6 +383,8 @@ function DetalheOrcamentoConteudo() {
               empresa: empresa.nome,
               logoUrl: empresa.logo,
               itens: itens,
+              desconto_tipo: (orcamento.desconto_tipo as "valor" | "percentual" | null) || null,
+              desconto_valor: orcamento.desconto_valor,
             }}
           />
           <BotaoWhatsApp
