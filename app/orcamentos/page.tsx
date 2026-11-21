@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -25,7 +25,6 @@ const itemVazio = (): Item => ({
   custo_material: "",
 });
 
-// Converte "1.234,56" ou "1234.56" em número
 function paraNumero(texto: string): number {
   if (!texto) return 0;
   const limpo = texto.replace(/\./g, "").replace(",", ".");
@@ -35,6 +34,8 @@ function paraNumero(texto: string): number {
 
 export default function NovoOrcamento() {
   const router = useRouter();
+  const inputFoto = useRef<HTMLInputElement>(null);
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
@@ -54,6 +55,9 @@ export default function NovoOrcamento() {
 
   const [descontoTipo, setDescontoTipo] = useState<"valor" | "percentual">("valor");
   const [descontoValor, setDescontoValor] = useState("");
+
+  const [fotos, setFotos] = useState<string[]>([]);
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
 
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
 
@@ -91,10 +95,8 @@ export default function NovoOrcamento() {
     paraNumero(custoIndireto);
 
   const custoTotal = custoMaterialItens + outrosCustos;
-
   const precoCliente = totalItens > 0 ? totalItens : custoTotal;
 
-  // Desconto
   const descontoBruto = paraNumero(descontoValor);
   const descontoAplicado =
     descontoTipo === "percentual"
@@ -102,7 +104,6 @@ export default function NovoOrcamento() {
       : Math.min(descontoBruto, precoCliente);
 
   const totalComDesconto = precoCliente - descontoAplicado;
-
   const lucro = totalComDesconto - custoTotal;
   const margemReal = totalComDesconto > 0 ? (lucro / totalComDesconto) * 100 : 0;
   const margemBaixa = totalComDesconto > 0 && margemReal < 20;
@@ -125,6 +126,68 @@ export default function NovoOrcamento() {
   function removerItem(index: number) {
     if (itens.length === 1) return;
     setItens(itens.filter((_, i) => i !== index));
+  }
+
+  async function enviarFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivos = Array.from(e.target.files || []);
+    if (arquivos.length === 0) return;
+
+    setErro("");
+
+    if (fotos.length + arquivos.length > 4) {
+      setErro("Máximo de 4 fotos por orçamento.");
+      return;
+    }
+
+    setEnviandoFoto(true);
+
+    const { data: sessao } = await supabase.auth.getSession();
+    const userId = sessao.session?.user.id;
+    if (!userId) {
+      router.push("/login");
+      return;
+    }
+
+    const novas: string[] = [];
+
+    for (const arquivo of arquivos) {
+      if (!arquivo.type.startsWith("image/")) {
+        setErro("Todos os arquivos precisam ser imagens.");
+        setEnviandoFoto(false);
+        return;
+      }
+      if (arquivo.size > 3 * 1024 * 1024) {
+        setErro("Cada foto precisa ter no máximo 3 MB.");
+        setEnviandoFoto(false);
+        return;
+      }
+
+      const extensao = arquivo.name.split(".").pop() || "jpg";
+      const caminho = `${userId}/orcamento-${Date.now()}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}.${extensao}`;
+
+      const { error: erroUpload } = await supabase.storage
+        .from("logos")
+        .upload(caminho, arquivo, { upsert: false });
+
+      if (erroUpload) {
+        setErro(erroUpload.message);
+        setEnviandoFoto(false);
+        return;
+      }
+
+      const { data: publica } = supabase.storage.from("logos").getPublicUrl(caminho);
+      novas.push(publica.publicUrl);
+    }
+
+    setFotos([...fotos, ...novas]);
+    setEnviandoFoto(false);
+    if (inputFoto.current) inputFoto.current.value = "";
+  }
+
+  function removerFoto(url: string) {
+    setFotos(fotos.filter((f) => f !== url));
   }
 
   async function salvar(e: React.FormEvent) {
@@ -219,6 +282,24 @@ export default function NovoOrcamento() {
       setSalvando(false);
       setErro(erroItens.message);
       return;
+    }
+
+    if (fotos.length > 0) {
+      const { error: erroFotos } = await supabase
+        .from("orcamento_imagens")
+        .insert(
+          fotos.map((url, idx) => ({
+            orcamento_id: orc.id,
+            url,
+            ordem: idx,
+          }))
+        );
+
+      if (erroFotos) {
+        setSalvando(false);
+        setErro(erroFotos.message);
+        return;
+      }
     }
 
     router.push("/orcamentos/lista");
@@ -612,7 +693,6 @@ export default function NovoOrcamento() {
               </div>
             </div>
 
-            {/* DESCONTO */}
             <div className="mt-4 pt-3 border-t border-[#F2EDE6]">
               <p className="text-xs font-semibold text-[#1A1A1A] mb-2">
                 Desconto para o cliente
@@ -731,6 +811,65 @@ export default function NovoOrcamento() {
                 </p>
               </div>
             </div>
+          </section>
+
+          {/* 6. FOTOS */}
+          <section className="bg-white border border-[#EDE7DF] rounded-2xl p-5">
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="w-6 h-6 rounded-full bg-[#C2410C] text-white text-xs font-bold flex items-center justify-center shrink-0">
+                6
+              </span>
+              <h2 className="font-semibold text-[#1A1A1A]">Fotos do serviço</h2>
+            </div>
+            <p className="text-xs text-[#5A5A5A] mb-4 ml-8">
+              Até 4 fotos. Aparecem no fim do PDF, abaixo das assinaturas.
+            </p>
+
+            <div className="grid grid-cols-2 gap-3">
+              {fotos.map((url) => (
+                <div
+                  key={url}
+                  className="relative border border-[#EDE7DF] rounded-lg overflow-hidden"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt="Foto do serviço"
+                    className="w-full aspect-square object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removerFoto(url)}
+                    className="absolute top-2 right-2 bg-white/90 text-xs text-[#5A5A5A] px-2 py-1 rounded hover:text-red-600"
+                  >
+                    Remover
+                  </button>
+                </div>
+              ))}
+
+              {fotos.length < 4 && (
+                <button
+                  type="button"
+                  onClick={() => inputFoto.current?.click()}
+                  disabled={enviandoFoto}
+                  className="aspect-square border-2 border-dashed border-[#D9D2C8] rounded-lg flex flex-col items-center justify-center hover:border-[#C2410C] transition disabled:opacity-60"
+                >
+                  <span className="text-2xl text-[#C2410C]">+</span>
+                  <span className="text-xs text-[#5A5A5A] mt-1">
+                    {enviandoFoto ? "Enviando..." : "Adicionar foto"}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={inputFoto}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={enviarFoto}
+              className="hidden"
+            />
           </section>
 
           {erro && (

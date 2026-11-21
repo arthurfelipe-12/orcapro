@@ -29,6 +29,7 @@ type Dados = {
   itens: Item[];
   desconto_tipo?: "valor" | "percentual" | null;
   desconto_valor?: number | null;
+  fotos?: string[];
 };
 
 export default function BotaoPdf({ dados }: { dados: Dados }) {
@@ -130,6 +131,24 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
             <span>${moeda(totalFinal)}</span>
           </div>`;
 
+    const blocoFotos =
+      dados.fotos && dados.fotos.length > 0
+        ? `<div style="margin-top:32px;">
+            <p style="margin:0 0 10px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Registro fotográfico</p>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;">
+              ${dados.fotos
+                .slice(0, 4)
+                .map(
+                  (url) =>
+                    `<div style="width:calc(50% - 6px);height:250px;overflow:hidden;border:1px solid #E5E5E5;border-radius:6px;">
+                      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                    </div>`
+                )
+                .join("")}
+            </div>
+          </div>`
+        : "";
+
     container.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #C2410C;padding-bottom:20px;margin-bottom:28px;">
         <div style="display:flex;align-items:center;gap:14px;">
@@ -211,11 +230,25 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
           </div>
         </div>
       </div>
+
+      ${blocoFotos}
     `;
 
     document.body.appendChild(container);
 
     try {
+      // Aguarda todas as imagens carregarem antes de capturar
+      await Promise.all(
+        Array.from(container.querySelectorAll("img")).map(
+          (img) =>
+            new Promise((resolve) => {
+              if (img.complete) return resolve(true);
+              img.onload = () => resolve(true);
+              img.onerror = () => resolve(true);
+            })
+        )
+      );
+
       const canvas = await html2canvas(container, {
         scale: 2,
         backgroundColor: "#FFFFFF",

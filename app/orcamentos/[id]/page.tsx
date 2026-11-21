@@ -39,6 +39,8 @@ type Item = {
   custo_material: number | null;
 };
 
+type Imagem = { id: string; url: string; ordem: number };
+
 function DetalheOrcamentoConteudo() {
   const params = useParams();
   const router = useRouter();
@@ -46,6 +48,7 @@ function DetalheOrcamentoConteudo() {
 
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null);
   const [itens, setItens] = useState<Item[]>([]);
+  const [imagens, setImagens] = useState<Imagem[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [excluindo, setExcluindo] = useState(false);
@@ -94,6 +97,14 @@ function DetalheOrcamentoConteudo() {
       .order("ordem");
 
     setItens((itensData as Item[]) || []);
+
+    const { data: imagensData } = await supabase
+      .from("orcamento_imagens")
+      .select("id, url, ordem")
+      .eq("orcamento_id", id)
+      .order("ordem");
+
+    setImagens((imagensData as Imagem[]) || []);
     setCarregando(false);
   }
 
@@ -132,6 +143,7 @@ function DetalheOrcamentoConteudo() {
 
     setExcluindo(true);
     await supabase.from("itens_orcamento").delete().eq("orcamento_id", orcamento.id);
+    await supabase.from("orcamento_imagens").delete().eq("orcamento_id", orcamento.id);
     const { error } = await supabase.from("orcamentos").delete().eq("id", orcamento.id);
 
     if (error) {
@@ -307,6 +319,27 @@ function DetalheOrcamentoConteudo() {
           </div>
         </section>
 
+        {imagens.length > 0 && (
+          <section className="bg-white border border-[#EDE7DF] rounded-2xl p-5 mb-4">
+            <h2 className="font-semibold text-[#1A1A1A] mb-3">Registro fotográfico</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {imagens.map((img) => (
+                <div
+                  key={img.id}
+                  className="border border-[#EDE7DF] rounded-lg overflow-hidden"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={img.url}
+                    alt="Foto do serviço"
+                    className="w-full aspect-square object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="bg-white border border-[#EDE7DF] rounded-2xl p-5 mb-4">
           <h2 className="font-semibold text-[#1A1A1A] mb-1">Resultado interno</h2>
           <p className="text-xs text-[#5A5A5A] mb-3">
@@ -388,6 +421,7 @@ function DetalheOrcamentoConteudo() {
               itens: itens,
               desconto_tipo: (orcamento.desconto_tipo as "valor" | "percentual" | null) || null,
               desconto_valor: orcamento.desconto_valor,
+              fotos: imagens.map((i) => i.url),
             }}
           />
           <BotaoWhatsApp
