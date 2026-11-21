@@ -55,25 +55,31 @@ export async function POST(req: NextRequest) {
       const plano = assinatura?.plano || 'mensal'
       const dias = DIAS_POR_PLANO[plano] ?? 30
 
-      const { data: perfil } = await supabaseAdmin
-        .from('profiles')
+      const { data: config } = await supabaseAdmin
+        .from('configuracoes')
         .select('trial_ends_at')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .maybeSingle()
 
       // Se o trial já venceu, conta a partir de hoje.
       // Se ainda está válido, soma em cima da data atual de acesso.
-      const base = perfil?.trial_ends_at && new Date(perfil.trial_ends_at) > new Date()
-        ? new Date(perfil.trial_ends_at)
+      const base = config?.trial_ends_at && new Date(config.trial_ends_at) > new Date()
+        ? new Date(config.trial_ends_at)
         : new Date()
 
       const novoVencimento = new Date(base)
       novoVencimento.setDate(novoVencimento.getDate() + dias)
 
-      await supabaseAdmin
-        .from('profiles')
-        .update({ trial_ends_at: novoVencimento.toISOString() })
-        .eq('id', userId)
+      if (config) {
+        await supabaseAdmin
+          .from('configuracoes')
+          .update({ trial_ends_at: novoVencimento.toISOString() })
+          .eq('user_id', userId)
+      } else {
+        await supabaseAdmin
+          .from('configuracoes')
+          .insert({ user_id: userId, trial_ends_at: novoVencimento.toISOString() })
+      }
     }
 
     return NextResponse.json({ ok: true })
