@@ -25,6 +25,7 @@ type Dados = {
   garantia: string | null;
   empresa: string;
   logoUrl: string | null;
+  assinaturaUrl?: string | null;
   itens: Item[];
   desconto_tipo?: "valor" | "percentual" | null;
   desconto_valor?: number | null;
@@ -36,7 +37,6 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
   const moeda = (v: number) =>
     Number(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  // Subtotal, desconto e total
   const subtotal = dados.itens.reduce(
     (soma, i) => soma + Number(i.valor_total || 0),
     0
@@ -193,11 +193,21 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
           Este orçamento é válido conforme o prazo indicado acima. A aprovação pode ser feita por WhatsApp ou e-mail.
         </p>
         <div style="display:flex;gap:40px;">
-          <div style="flex:1;border-top:1px solid #999;padding-top:6px;">
-            <p style="margin:0;font-size:10px;color:#777;">${dados.empresa}</p>
+          <div style="flex:1;text-align:center;">
+            ${
+              dados.assinaturaUrl
+                ? `<img src="${dados.assinaturaUrl}" style="max-height:52px;max-width:180px;object-fit:contain;margin:0 auto 4px;display:block;" />`
+                : `<div style="height:52px;"></div>`
+            }
+            <div style="border-top:1px solid #999;padding-top:6px;">
+              <p style="margin:0;font-size:10px;color:#777;">${dados.empresa}</p>
+            </div>
           </div>
-          <div style="flex:1;border-top:1px solid #999;padding-top:6px;">
-            <p style="margin:0;font-size:10px;color:#777;">${dados.cliente}</p>
+          <div style="flex:1;text-align:center;">
+            <div style="height:52px;"></div>
+            <div style="border-top:1px solid #999;padding-top:6px;">
+              <p style="margin:0;font-size:10px;color:#777;">${dados.cliente}</p>
+            </div>
           </div>
         </div>
       </div>

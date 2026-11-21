@@ -52,6 +52,7 @@ function DetalheOrcamentoConteudo() {
   const [empresa, setEmpresa] = useState({
     nome: "Minha empresa",
     logo: null as string | null,
+    assinatura: null as string | null,
   });
 
   useEffect(() => {
@@ -99,13 +100,14 @@ function DetalheOrcamentoConteudo() {
   async function carregarEmpresa() {
     const { data } = await supabase
       .from("configuracoes")
-      .select("nome_empresa, logo_url")
+      .select("nome_empresa, logo_url, assinatura_url")
       .maybeSingle();
 
     if (data) {
       setEmpresa({
         nome: data.nome_empresa || "Minha empresa",
         logo: data.logo_url || null,
+        assinatura: data.assinatura_url || null,
       });
     }
   }
@@ -382,6 +384,7 @@ function DetalheOrcamentoConteudo() {
               garantia: orcamento.garantia,
               empresa: empresa.nome,
               logoUrl: empresa.logo,
+              assinaturaUrl: empresa.assinatura,
               itens: itens,
               desconto_tipo: (orcamento.desconto_tipo as "valor" | "percentual" | null) || null,
               desconto_valor: orcamento.desconto_valor,

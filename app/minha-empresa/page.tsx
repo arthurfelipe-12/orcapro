@@ -8,15 +8,18 @@ import { supabase } from "@/lib/supabase";
 export default function MinhaEmpresa() {
   const router = useRouter();
   const inputArquivo = useRef<HTMLInputElement>(null);
+  const inputAssinatura = useRef<HTMLInputElement>(null);
 
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [enviandoLogo, setEnviandoLogo] = useState(false);
+  const [enviandoAssinatura, setEnviandoAssinatura] = useState(false);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
 
   const [nomeEmpresa, setNomeEmpresa] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [assinaturaUrl, setAssinaturaUrl] = useState("");
 
   useEffect(() => {
     carregar();
@@ -40,6 +43,7 @@ export default function MinhaEmpresa() {
     } else if (data) {
       setNomeEmpresa(data.nome_empresa || "");
       setLogoUrl(data.logo_url || "");
+      setAssinaturaUrl(data.assinatura_url || "");
     }
     setCarregando(false);
   }
@@ -128,6 +132,100 @@ export default function MinhaEmpresa() {
     setSucesso("Logo removida.");
   }
 
+  async function enviarAssinatura(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+
+    setErro("");
+    setSucesso("");
+
+    if (!arquivo.type.startsWith("image/")) {
+      setErro("O arquivo precisa ser uma imagem.");
+      return;
+    }
+
+    if (arquivo.size > 2 * 1024 * 1024) {
+      setErro("A imagem precisa ter no máximo 2 MB.");
+      return;
+    }
+
+    setEnviandoAssinatura(true);
+
+    const { data: sessao } = await supabase.auth.getSession();
+    const userId = sessao.session?.user.id;
+    if (!userId) {
+      router.push("/login");
+      return;
+    }
+
+    const extensao = arquivo.name.split(".").pop() || "png";
+    const caminho = `${userId}/assinatura.${extensao}`;
+
+    const { error: erroUpload } = await supabase.storage
+      .from("logos")
+      .upload(caminho, arquivo, { upsert: true });
+
+    if (erroUpload) {
+      setEnviandoAssinatura(false);
+      setErro(erroUpload.message);
+      return;
+    }
+
+    const { data: publica } = supabase.storage.from("logos").getPublicUrl(caminho);
+    const url = `${publica.publicUrl}?v=${Date.now()}`;
+
+    const { error: erroSalvar } = await supabase
+      .from("configuracoes")
+      .upsert(
+        {
+          user_id: userId,
+          nome_empresa: nomeEmpresa.trim() || null,
+          logo_url: logoUrl || null,
+          assinatura_url: url,
+        },
+        { onConflict: "user_id" }
+      );
+
+    setEnviandoAssinatura(false);
+
+    if (erroSalvar) {
+      setErro(erroSalvar.message);
+      return;
+    }
+
+    setAssinaturaUrl(url);
+    setSucesso("Assinatura enviada.");
+  }
+
+  async function removerAssinatura() {
+    setErro("");
+    setSucesso("");
+
+    const { data: sessao } = await supabase.auth.getSession();
+    const userId = sessao.session?.user.id;
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("configuracoes")
+      .upsert(
+        {
+          user_id: userId,
+          nome_empresa: nomeEmpresa.trim() || null,
+          logo_url: logoUrl || null,
+          assinatura_url: null,
+        },
+        { onConflict: "user_id" }
+      );
+
+    if (error) {
+      setErro(error.message);
+      return;
+    }
+
+    setAssinaturaUrl("");
+    setSucesso("Assinatura removida.");
+  }
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro("");
@@ -146,6 +244,7 @@ export default function MinhaEmpresa() {
         user_id: userId,
         nome_empresa: nomeEmpresa.trim() || null,
         logo_url: logoUrl || null,
+        assinatura_url: assinaturaUrl || null,
       },
       { onConflict: "user_id" }
     );
@@ -263,6 +362,66 @@ export default function MinhaEmpresa() {
               onChange={enviarLogo}
               className="hidden"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-[#1A1A1A] mb-2">
+              Assinatura digitalizada
+            </label>
+
+            {assinaturaUrl ? (
+              <div className="border border-[#EDE7DF] rounded-lg p-6 bg-[#FDFBF8] flex flex-col items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={assinaturaUrl}
+                  alt="Assinatura"
+                  className="max-h-24 max-w-full object-contain"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => inputAssinatura.current?.click()}
+                    className="text-sm text-[#C2410C] hover:underline"
+                  >
+                    Trocar assinatura
+                  </button>
+                  <span className="text-[#D9D2C8]">|</span>
+                  <button
+                    type="button"
+                    onClick={removerAssinatura}
+                    className="text-sm text-[#5A5A5A] hover:text-red-600"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => inputAssinatura.current?.click()}
+                disabled={enviandoAssinatura}
+                className="w-full border-2 border-dashed border-[#D9D2C8] rounded-lg py-8 text-center hover:border-[#C2410C] transition disabled:opacity-60"
+              >
+                <p className="text-sm font-medium text-[#1A1A1A]">
+                  {enviandoAssinatura ? "Enviando..." : "Clique para enviar a assinatura"}
+                </p>
+                <p className="text-xs text-[#5A5A5A] mt-1">
+                  Foto ou imagem da assinatura em fundo branco · até 2 MB
+                </p>
+              </button>
+            )}
+
+            <input
+              ref={inputAssinatura}
+              type="file"
+              accept="image/*"
+              onChange={enviarAssinatura}
+              className="hidden"
+            />
+
+            <p className="text-xs text-[#5A5A5A] mt-2">
+              A assinatura aparece no rodapé de todo PDF gerado.
+            </p>
           </div>
 
           {erro && (
