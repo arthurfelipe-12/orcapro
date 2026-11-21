@@ -424,6 +424,12 @@ function DetalheOrcamentoConteudo() {
               fotos: imagens.map((i) => i.url),
             }}
           />
+          <Link
+            href={`/ordens-servico/nova?orcamento=${orcamento.id}`}
+            className="border border-[#C2410C] text-[#C2410C] text-sm font-medium px-4 py-2.5 rounded-lg hover:bg-[#FDFBF8] transition"
+          >
+            + Ordem de serviço
+          </Link>
           <BotaoWhatsApp
             dados={{
               cliente: orcamento.clientes?.nome || "Cliente",

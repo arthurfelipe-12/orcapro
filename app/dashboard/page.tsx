@@ -23,6 +23,7 @@ export default function Dashboard() {
   const [logoUrl, setLogoUrl] = useState("");
   const [totalOrcamentos, setTotalOrcamentos] = useState(0);
   const [totalClientes, setTotalClientes] = useState(0);
+  const [totalOs, setTotalOs] = useState(0);
   const [valorAprovado, setValorAprovado] = useState(0);
 
   useEffect(() => {
@@ -86,6 +87,12 @@ export default function Dashboard() {
         .select("*", { count: "exact", head: true });
 
       setTotalClientes(qtdClientes || 0);
+
+      const { count: qtdOs } = await supabase
+        .from("ordens_servico")
+        .select("*", { count: "exact", head: true });
+
+      setTotalOs(qtdOs || 0);
 
       const { data: aprovados } = await supabase
         .from("orcamentos")
@@ -165,10 +172,14 @@ export default function Dashboard() {
           </p>
         )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <div className="bg-white border border-[#EDE7DF] rounded-xl p-5">
             <p className="text-xs text-[#5A5A5A] mb-1">Orçamentos</p>
             <p className="text-2xl font-bold text-[#1A1A1A]">{totalOrcamentos}</p>
+          </div>
+          <div className="bg-white border border-[#EDE7DF] rounded-xl p-5">
+            <p className="text-xs text-[#5A5A5A] mb-1">Ordens de serviço</p>
+            <p className="text-2xl font-bold text-[#1A1A1A]">{totalOs}</p>
           </div>
           <div className="bg-white border border-[#EDE7DF] rounded-xl p-5">
             <p className="text-xs text-[#5A5A5A] mb-1">Clientes</p>
@@ -188,10 +199,22 @@ export default function Dashboard() {
             + Novo orçamento
           </Link>
           <Link
+            href="/ordens-servico/nova"
+            className="bg-white border border-[#C2410C] text-[#C2410C] font-medium px-5 py-4 rounded-xl hover:bg-[#FDFBF8] transition text-center"
+          >
+            + Nova ordem de serviço
+          </Link>
+          <Link
             href="/orcamentos/lista"
             className="bg-white border border-[#EDE7DF] text-[#1A1A1A] font-medium px-5 py-4 rounded-xl hover:border-[#C2410C] transition text-center"
           >
             Ver meus orçamentos
+          </Link>
+          <Link
+            href="/ordens-servico/lista"
+            className="bg-white border border-[#EDE7DF] text-[#1A1A1A] font-medium px-5 py-4 rounded-xl hover:border-[#C2410C] transition text-center"
+          >
+            Ver ordens de serviço
           </Link>
           <Link
             href="/clientes"
