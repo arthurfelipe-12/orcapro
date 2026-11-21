@@ -54,9 +54,8 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
 
   const totalFinal = subtotal - desconto;
 
-  async function gerar() {
-    setGerando(true);
-
+  // Cria um container fora da tela e espera as imagens carregarem
+  async function capturar(html: string) {
     const container = document.createElement("div");
     container.style.position = "fixed";
     container.style.left = "-9999px";
@@ -66,178 +65,11 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
     container.style.padding = "48px";
     container.style.fontFamily = "Arial, Helvetica, sans-serif";
     container.style.color = "#1A1A1A";
-
-    const linhasItens = dados.itens
-      .map((i) => {
-        const material =
-          i.material_incluso === true
-            ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F0FDF4;color:#15803D;font-size:10px;font-weight:bold;">Material incluso</span>`
-            : i.material_incluso === false
-            ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F5F5F5;color:#666;font-size:10px;font-weight:bold;">Só mão de obra</span>`
-            : "";
-
-        return `
-        <tr>
-          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;">
-            ${i.descricao}
-            ${material ? `<div style="margin-top:4px;">${material}</div>` : ""}
-          </td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:center;">${Number(
-            i.quantidade
-          )} ${i.unidade}</td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:right;">${moeda(
-            i.valor_unitario
-          )}</td>
-          <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:right;font-weight:bold;">${moeda(
-            i.valor_total
-          )}</td>
-        </tr>`;
-      })
-      .join("");
-
-    const condicoes = [
-      dados.validade_dias
-        ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Validade da proposta:</strong> ${dados.validade_dias} dias</p>`
-        : "",
-      dados.prazo_execucao
-        ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Prazo de execução:</strong> ${dados.prazo_execucao}</p>`
-        : "",
-      dados.forma_pagamento
-        ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Forma de pagamento:</strong> ${dados.forma_pagamento}</p>`
-        : "",
-      dados.garantia
-        ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Garantia:</strong> ${dados.garantia}</p>`
-        : "",
-    ].join("");
-
-    const blocoTotais =
-      desconto > 0
-        ? `
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:6px;">
-            <span>Subtotal</span>
-            <span>${moeda(subtotal)}</span>
-          </div>
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:#C2410C;margin-bottom:8px;">
-            <span>Desconto${dados.desconto_tipo === "percentual" ? ` (${Number(dados.desconto_valor)}%)` : ""}</span>
-            <span>- ${moeda(desconto)}</span>
-          </div>
-          <div style="border-top:1px solid #EDE7DF;padding-top:8px;display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
-            <span>Total</span>
-            <span>${moeda(totalFinal)}</span>
-          </div>`
-        : `
-          <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
-            <span>Total</span>
-            <span>${moeda(totalFinal)}</span>
-          </div>`;
-
-    const blocoFotos =
-      dados.fotos && dados.fotos.length > 0
-        ? `<div style="margin-top:32px;">
-            <p style="margin:0 0 10px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Registro fotográfico</p>
-            <div style="display:flex;flex-wrap:wrap;gap:12px;">
-              ${dados.fotos
-                .slice(0, 4)
-                .map(
-                  (url) =>
-                    `<div style="width:calc(50% - 6px);height:250px;overflow:hidden;border:1px solid #E5E5E5;border-radius:6px;">
-                      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" />
-                    </div>`
-                )
-                .join("")}
-            </div>
-          </div>`
-        : "";
-
-    container.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #C2410C;padding-bottom:20px;margin-bottom:28px;">
-        <div style="display:flex;align-items:center;gap:14px;">
-          ${
-            dados.logoUrl
-              ? `<img src="${dados.logoUrl}" style="max-height:64px;max-width:160px;object-fit:contain;" />`
-              : ""
-          }
-          <div>
-            <p style="margin:0;font-size:18px;font-weight:bold;">${dados.empresa}</p>
-            <p style="margin:2px 0 0;font-size:11px;color:#777;">Orçamento de serviço</p>
-          </div>
-        </div>
-        <div style="text-align:right;">
-          <p style="margin:0;font-size:11px;color:#777;">Data</p>
-          <p style="margin:2px 0 0;font-size:13px;font-weight:bold;">${dados.data}</p>
-        </div>
-      </div>
-
-      <h1 style="margin:0 0 4px;font-size:20px;font-weight:bold;">${dados.titulo}</h1>
-      <p style="margin:0 0 24px;font-size:13px;color:#555;">Cliente: <strong>${dados.cliente}</strong></p>
-
-      ${
-        dados.escopo
-          ? `<div style="margin-bottom:24px;">
-              <p style="margin:0 0 6px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Escopo do serviço</p>
-              <p style="margin:0;font-size:12px;line-height:1.6;color:#333;white-space:pre-wrap;">${dados.escopo}</p>
-            </div>`
-          : ""
-      }
-
-      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
-        <thead>
-          <tr style="background:#FDFBF8;">
-            <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Descrição</th>
-            <th style="padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Qtd</th>
-            <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Valor un.</th>
-            <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Total</th>
-          </tr>
-        </thead>
-        <tbody>${linhasItens}</tbody>
-      </table>
-
-      <div style="display:flex;justify-content:flex-end;margin-bottom:28px;">
-        <div style="min-width:260px;background:#FDFBF8;border:1px solid #EDE7DF;border-radius:8px;padding:14px 18px;">
-          ${blocoTotais}
-        </div>
-      </div>
-
-      ${
-        condicoes
-          ? `<div style="margin-bottom:28px;">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Condições</p>
-              ${condicoes}
-            </div>`
-          : ""
-      }
-
-      <div style="border-top:1px solid #E5E5E5;padding-top:16px;margin-top:32px;">
-        <p style="margin:0 0 28px;font-size:11px;color:#777;line-height:1.5;">
-          Este orçamento é válido conforme o prazo indicado acima. A aprovação pode ser feita por WhatsApp ou e-mail.
-        </p>
-        <div style="display:flex;gap:40px;">
-          <div style="flex:1;text-align:center;">
-            ${
-              dados.assinaturaUrl
-                ? `<img src="${dados.assinaturaUrl}" style="max-height:52px;max-width:180px;object-fit:contain;margin:0 auto 4px;display:block;" />`
-                : `<div style="height:52px;"></div>`
-            }
-            <div style="border-top:1px solid #999;padding-top:6px;">
-              <p style="margin:0;font-size:10px;color:#777;">${dados.empresa}</p>
-            </div>
-          </div>
-          <div style="flex:1;text-align:center;">
-            <div style="height:52px;"></div>
-            <div style="border-top:1px solid #999;padding-top:6px;">
-              <p style="margin:0;font-size:10px;color:#777;">${dados.cliente}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      ${blocoFotos}
-    `;
+    container.innerHTML = html;
 
     document.body.appendChild(container);
 
     try {
-      // Aguarda todas as imagens carregarem antes de capturar
       await Promise.all(
         Array.from(container.querySelectorAll("img")).map(
           (img) =>
@@ -255,25 +87,215 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
         useCORS: true,
       });
 
-      const img = canvas.toDataURL("image/jpeg", 0.95);
-      const pdf = new jsPDF("p", "mm", "a4");
+      return canvas.toDataURL("image/jpeg", 0.95);
+    } finally {
+      document.body.removeChild(container);
+    }
+  }
 
+  async function gerar() {
+    setGerando(true);
+
+    try {
+      // ---------- PÁGINA 1: ORÇAMENTO ----------
+      const linhasItens = dados.itens
+        .map((i) => {
+          const material =
+            i.material_incluso === true
+              ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F0FDF4;color:#15803D;font-size:10px;font-weight:bold;">Material incluso</span>`
+              : i.material_incluso === false
+              ? `<span style="display:inline-block;padding:2px 7px;border-radius:4px;background:#F5F5F5;color:#666;font-size:10px;font-weight:bold;">Só mão de obra</span>`
+              : "";
+
+          return `
+          <tr>
+            <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;">
+              ${i.descricao}
+              ${material ? `<div style="margin-top:4px;">${material}</div>` : ""}
+            </td>
+            <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:center;">${Number(
+              i.quantidade
+            )} ${i.unidade}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:right;">${moeda(
+              i.valor_unitario
+            )}</td>
+            <td style="padding:10px 8px;border-bottom:1px solid #E5E5E5;font-size:12px;text-align:right;font-weight:bold;">${moeda(
+              i.valor_total
+            )}</td>
+          </tr>`;
+        })
+        .join("");
+
+      const condicoes = [
+        dados.validade_dias
+          ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Validade da proposta:</strong> ${dados.validade_dias} dias</p>`
+          : "",
+        dados.prazo_execucao
+          ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Prazo de execução:</strong> ${dados.prazo_execucao}</p>`
+          : "",
+        dados.forma_pagamento
+          ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Forma de pagamento:</strong> ${dados.forma_pagamento}</p>`
+          : "",
+        dados.garantia
+          ? `<p style="margin:0 0 6px;font-size:12px;"><strong>Garantia:</strong> ${dados.garantia}</p>`
+          : "",
+      ].join("");
+
+      const blocoTotais =
+        desconto > 0
+          ? `
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-bottom:6px;">
+              <span>Subtotal</span>
+              <span>${moeda(subtotal)}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#C2410C;margin-bottom:8px;">
+              <span>Desconto${dados.desconto_tipo === "percentual" ? ` (${Number(dados.desconto_valor)}%)` : ""}</span>
+              <span>- ${moeda(desconto)}</span>
+            </div>
+            <div style="border-top:1px solid #EDE7DF;padding-top:8px;display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
+              <span>Total</span>
+              <span>${moeda(totalFinal)}</span>
+            </div>`
+          : `
+            <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:bold;">
+              <span>Total</span>
+              <span>${moeda(totalFinal)}</span>
+            </div>`;
+
+      const htmlOrcamento = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #C2410C;padding-bottom:20px;margin-bottom:28px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            ${
+              dados.logoUrl
+                ? `<img src="${dados.logoUrl}" style="max-height:64px;max-width:160px;object-fit:contain;" />`
+                : ""
+            }
+            <div>
+              <p style="margin:0;font-size:18px;font-weight:bold;">${dados.empresa}</p>
+              <p style="margin:2px 0 0;font-size:11px;color:#777;">Orçamento de serviço</p>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <p style="margin:0;font-size:11px;color:#777;">Data</p>
+            <p style="margin:2px 0 0;font-size:13px;font-weight:bold;">${dados.data}</p>
+          </div>
+        </div>
+
+        <h1 style="margin:0 0 4px;font-size:20px;font-weight:bold;">${dados.titulo}</h1>
+        <p style="margin:0 0 24px;font-size:13px;color:#555;">Cliente: <strong>${dados.cliente}</strong></p>
+
+        ${
+          dados.escopo
+            ? `<div style="margin-bottom:24px;">
+                <p style="margin:0 0 6px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Escopo do serviço</p>
+                <p style="margin:0;font-size:12px;line-height:1.6;color:#333;white-space:pre-wrap;">${dados.escopo}</p>
+              </div>`
+            : ""
+        }
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+          <thead>
+            <tr style="background:#FDFBF8;">
+              <th style="padding:10px 8px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Descrição</th>
+              <th style="padding:10px 8px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Qtd</th>
+              <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Valor un.</th>
+              <th style="padding:10px 8px;text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#777;border-bottom:1px solid #E5E5E5;">Total</th>
+            </tr>
+          </thead>
+          <tbody>${linhasItens}</tbody>
+        </table>
+
+        <div style="display:flex;justify-content:flex-end;margin-bottom:28px;">
+          <div style="min-width:260px;background:#FDFBF8;border:1px solid #EDE7DF;border-radius:8px;padding:14px 18px;">
+            ${blocoTotais}
+          </div>
+        </div>
+
+        ${
+          condicoes
+            ? `<div style="margin-bottom:28px;">
+                <p style="margin:0 0 8px;font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:0.06em;color:#C2410C;">Condições</p>
+                ${condicoes}
+              </div>`
+            : ""
+        }
+
+        <div style="border-top:1px solid #E5E5E5;padding-top:16px;margin-top:32px;">
+          <p style="margin:0 0 28px;font-size:11px;color:#777;line-height:1.5;">
+            Este orçamento é válido conforme o prazo indicado acima. A aprovação pode ser feita por WhatsApp ou e-mail.
+          </p>
+          <div style="display:flex;gap:40px;">
+            <div style="flex:1;text-align:center;">
+              ${
+                dados.assinaturaUrl
+                  ? `<img src="${dados.assinaturaUrl}" style="max-height:52px;max-width:180px;object-fit:contain;margin:0 auto 4px;display:block;" />`
+                  : `<div style="height:52px;"></div>`
+              }
+              <div style="border-top:1px solid #999;padding-top:6px;">
+                <p style="margin:0;font-size:10px;color:#777;">${dados.empresa}</p>
+              </div>
+            </div>
+            <div style="flex:1;text-align:center;">
+              <div style="height:52px;"></div>
+              <div style="border-top:1px solid #999;padding-top:6px;">
+                <p style="margin:0;font-size:10px;color:#777;">${dados.cliente}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const imgOrcamento = await capturar(htmlOrcamento);
+
+      const pdf = new jsPDF("p", "mm", "a4");
       const larguraPagina = 210;
       const alturaPagina = 297;
-      const larguraImg = larguraPagina;
-      const alturaImg = (canvas.height * larguraImg) / canvas.width;
 
-      let alturaRestante = alturaImg;
+      // Adiciona a página do orçamento (fatiando se passar de uma folha)
+      const alturaImgOrcamento = (await alturaDaImagem(imgOrcamento)) * (larguraPagina / larguraPagina);
+      let restante = alturaImgOrcamento;
       let posicao = 0;
 
-      pdf.addImage(img, "JPEG", 0, 0, larguraImg, alturaImg);
-      alturaRestante -= alturaPagina;
+      pdf.addImage(imgOrcamento, "JPEG", 0, 0, larguraPagina, alturaImgOrcamento);
+      restante -= alturaPagina;
 
-      while (alturaRestante > 0) {
+      while (restante > 0) {
         posicao -= alturaPagina;
         pdf.addPage();
-        pdf.addImage(img, "JPEG", 0, posicao, larguraImg, alturaImg);
-        alturaRestante -= alturaPagina;
+        pdf.addImage(imgOrcamento, "JPEG", 0, posicao, larguraPagina, alturaImgOrcamento);
+        restante -= alturaPagina;
+      }
+
+      // ---------- PÁGINA 2: FOTOS ----------
+      if (dados.fotos && dados.fotos.length > 0) {
+        const htmlFotos = `
+          <div style="border-bottom:2px solid #C2410C;padding-bottom:14px;margin-bottom:24px;">
+            <p style="margin:0;font-size:11px;color:#777;">${dados.empresa}</p>
+            <p style="margin:2px 0 0;font-size:18px;font-weight:bold;">Registro fotográfico</p>
+            <p style="margin:4px 0 0;font-size:11px;color:#777;">${dados.titulo} · ${dados.cliente} · ${dados.data}</p>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:16px;">
+            ${dados.fotos
+              .slice(0, 4)
+              .map(
+                (url, idx) =>
+                  `<div style="width:calc(50% - 8px);">
+                    <div style="width:100%;height:300px;overflow:hidden;border:1px solid #E5E5E5;border-radius:6px;">
+                      <img src="${url}" style="width:100%;height:100%;object-fit:cover;display:block;" />
+                    </div>
+                    <p style="margin:6px 0 0;font-size:10px;color:#777;text-align:center;">Foto ${idx + 1}</p>
+                  </div>`
+              )
+              .join("")}
+          </div>
+        `;
+
+        const imgFotos = await capturar(htmlFotos);
+        const alturaImgFotos = (await alturaDaImagem(imgFotos));
+
+        // Sempre em página nova
+        pdf.addPage();
+        pdf.addImage(imgFotos, "JPEG", 0, 0, larguraPagina, alturaImgFotos);
       }
 
       const nomeArquivo = `orcamento-${dados.cliente
@@ -285,9 +307,21 @@ export default function BotaoPdf({ dados }: { dados: Dados }) {
 
       pdf.save(nomeArquivo);
     } finally {
-      document.body.removeChild(container);
       setGerando(false);
     }
+  }
+
+  // Descobre a altura proporcional da imagem em mm
+  function alturaDaImagem(dataUrl: string): Promise<number> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const larguraMm = 210;
+        resolve((img.height * larguraMm) / img.width);
+      };
+      img.onerror = () => resolve(297);
+      img.src = dataUrl;
+    });
   }
 
   return (
