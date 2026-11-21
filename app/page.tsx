@@ -1,5 +1,4 @@
 "use client";
-
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -54,7 +53,7 @@ export default function Home() {
             <span className="text-[#C2410C]">Sem caderno, sem Word.</span>
           </h1>
           <p className="text-[#5A5A5A] text-lg leading-relaxed mt-6 max-w-lg">
-            O OrçaPro é o app de orçamentos para empresas de reforma que não querem perder obra por demora. Monte a proposta, controle a margem real e envie direto no WhatsApp do cliente.
+            O OrçaPro é o app de orçamentos para empresas de reforma que não querem perder obra por demora. Monte a proposta, controle a margem real, gere a ordem de serviço e envie direto no WhatsApp do cliente.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 mt-9">
             <Link href="/cadastro" className="bg-[#C2410C] text-white font-medium px-7 py-3.5 rounded-lg hover:bg-[#9A3412] transition text-center">
@@ -65,7 +64,7 @@ export default function Home() {
             </Link>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 mt-9 text-sm text-[#5A5A5A]">
-            {["Sem cartão de crédito", "Feito para usar no celular", "PDF com sua logo"].map((item) => (
+            {["Sem cartão de crédito", "Feito para usar no celular", "PDF com sua logo", "Orçamento e ordem de serviço"].map((item) => (
               <span key={item} className="flex items-center gap-1.5">
                 <svg className="w-4 h-4 text-[#C2410C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
@@ -88,36 +87,47 @@ export default function Home() {
                 Enviado
               </span>
             </div>
+
             <div className="py-5 border-b border-[#F0EBE4]">
               <p className="text-[10px] uppercase tracking-wider text-[#8A8A8A] mb-1">Cliente</p>
               <p className="text-sm font-medium text-[#1A1A1A]">Marta Ribeiro</p>
               <p className="text-xs text-[#8A8A8A] mt-0.5">Rua das Acácias, 240 — Apto 71</p>
             </div>
-            <div className="py-5 space-y-4">
-              {[
-                { nome: "Instalação de 12 pontos de tomada", qtd: "12 x R$ 95,00", valor: "R$ 1.140,00" },
-                { nome: "Troca do quadro de distribuição", qtd: "1 x R$ 780,00", valor: "R$ 780,00" },
-                { nome: "Passagem de infraestrutura", qtd: "45m x R$ 28,00", valor: "R$ 1.260,00" },
-              ].map((item) => (
-                <div key={item.nome} className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-sm text-[#1A1A1A] leading-snug">{item.nome}</p>
-                    <p className="text-xs text-[#8A8A8A] mt-0.5">{item.qtd}</p>
+
+            <div className="py-5">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-[#F0EBE4]">
+                <p className="text-[10px] uppercase tracking-wider text-[#8A8A8A]">Serviço</p>
+                <p className="text-[10px] uppercase tracking-wider text-[#8A8A8A]">Qtd × Valor un.</p>
+              </div>
+              <div className="space-y-4">
+                {[
+                  { nome: "Instalação de 12 pontos de tomada", qtd: "12 un × R$ 95,00", valor: "R$ 1.140,00" },
+                  { nome: "Troca do quadro de distribuição", qtd: "1 un × R$ 780,00", valor: "R$ 780,00" },
+                  { nome: "Passagem de infraestrutura", qtd: "45 m × R$ 28,00", valor: "R$ 1.260,00" },
+                ].map((item) => (
+                  <div key={item.nome} className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-sm text-[#1A1A1A] leading-snug">{item.nome}</p>
+                      <p className="text-xs text-[#8A8A8A] mt-0.5">{item.qtd}</p>
+                    </div>
+                    <p className="text-sm font-medium text-[#1A1A1A] whitespace-nowrap">{item.valor}</p>
                   </div>
-                  <p className="text-sm font-medium text-[#1A1A1A] whitespace-nowrap">{item.valor}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
+
             <div className="flex items-center justify-between py-4 border-t border-[#F0EBE4]">
               <p className="text-sm text-[#5A5A5A]">Total</p>
               <p className="text-xl font-bold text-[#1A1A1A]">R$ 3.180,00</p>
             </div>
+
             <div className="pt-2">
               <div className="bg-[#FDFBF8] border border-[#EDE7DF] rounded-lg px-3 py-2.5 text-center">
                 <p className="text-xs text-[#5A5A5A]">Proposta válida por 15 dias</p>
               </div>
             </div>
           </div>
+
           <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-white border border-[#EDE7DF] shadow-lg rounded-full px-4 py-2 flex items-center gap-2 whitespace-nowrap">
             <svg className="w-4 h-4 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
               <path d="M17.5 14.4c-.3-.2-1.7-.9-2-1-.3-.1-.5-.2-.7.2-.2.3-.7 1-.9 1.2-.2.2-.3.2-.6.1-1.7-.9-2.9-1.6-4-3.6-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.7.6-.1 1.7-.7 1.9-1.4.2-.7.2-1.3.2-1.4-.1-.2-.3-.2-.5-.3z" />
@@ -139,7 +149,7 @@ export default function Home() {
             {[
               { n: "01", t: "Monte a proposta", d: "Adicione serviços, quantidades e materiais. O OrçaPro calcula o total na hora." },
               { n: "02", t: "Veja o lucro real", d: "Informe o custo interno e descubra a margem antes de fechar o serviço." },
-              { n: "03", t: "Envie no WhatsApp", d: "Baixe o PDF com sua logo e envie com a mensagem já pronta." },
+              { n: "03", t: "Envie e execute", d: "Baixe o PDF com sua logo, gere a ordem de serviço e envie no WhatsApp." },
             ].map((p) => (
               <div key={p.n}>
                 <p className="text-3xl font-bold text-[#E8DCCF] mb-3">{p.n}</p>
@@ -163,6 +173,7 @@ export default function Home() {
               { t: "Cálculo sem erro", d: "Custo de material, mão de obra e margem calculados automaticamente. Sem conta de cabeça." },
               { t: "PDF com sua logo", d: "Proposta com a identidade do seu negócio, pronta para imprimir ou enviar." },
               { t: "Lucro visível", d: "Custo interno, lucro real e margem em cada orçamento. Alerta quando a margem está baixa." },
+              { t: "Ordem de serviço", d: "Transforme a proposta aprovada em ordem de serviço com escopo, prazo e responsáveis." },
               { t: "Direto no WhatsApp", d: "Mensagem pronta com os dados da proposta. Você só anexa o PDF e envia." },
             ].map((r) => (
               <div key={r.t} className="bg-white border border-[#EDE7DF] rounded-xl p-7">
@@ -191,7 +202,7 @@ export default function Home() {
                 <span className="text-sm text-[#8A8A8A] ml-1">por mês</span>
               </div>
               <ul className="mt-6 space-y-3 text-sm text-[#5A5A5A]">
-                {["Orçamentos ilimitados", "PDF com sua logo", "Mensagem automática no WhatsApp", "Envio por WhatsApp"].map((b) => (
+                {["Orçamentos ilimitados", "Ordens de serviço ilimitadas", "PDF com sua logo", "Mensagem automática no WhatsApp", "Envio por WhatsApp"].map((b) => (
                   <li key={b} className="flex items-start gap-2">
                     <svg className="w-4 h-4 text-[#C2410C] mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />

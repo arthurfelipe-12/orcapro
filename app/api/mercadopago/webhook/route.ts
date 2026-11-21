@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       pagamento.status === 'rejected' || pagamento.status === 'cancelled' ? 'cancelado' :
       'pendente'
 
-    // 1. Atualiza a assinatura
+    // 1. Atualiza a assinatura pelo user_id (mais confiável que preference_id)
     const { data: assinatura } = await supabaseAdmin
       .from('assinaturas')
       .update({
@@ -46,8 +46,10 @@ export async function POST(req: NextRequest) {
         mercadopago_payment_id: String(paymentId),
         atualizado_em: new Date().toISOString(),
       })
-      .eq('mercadopago_preference_id', pagamento.preference_id)
+      .eq('user_id', userId)
       .select('plano')
+      .order('id', { ascending: false })
+      .limit(1)
       .maybeSingle()
 
     // 2. Se aprovado, desbloqueia o acesso estendendo o trial_ends_at
@@ -57,9 +59,14 @@ export async function POST(req: NextRequest) {
 
       const { data: config } = await supabaseAdmin
         .from('configuracoes')
-        .select('trial_ends_at')
+        .select('trial_ends_at, ultimo_payment_id')
         .eq('user_id', userId)
         .maybeSingle()
+
+      // Evita somar dias repetidos quando o Mercado Pago reenvia a notificação
+      if (config?.ultimo_payment_id === String(paymentId)) {
+        return NextResponse.json({ ok: true, ignorado: true })
+      }
 
       // Se o trial já venceu, conta a partir de hoje.
       // Se ainda está válido, soma em cima da data atual de acesso.
@@ -73,12 +80,19 @@ export async function POST(req: NextRequest) {
       if (config) {
         await supabaseAdmin
           .from('configuracoes')
-          .update({ trial_ends_at: novoVencimento.toISOString() })
+          .update({
+            trial_ends_at: novoVencimento.toISOString(),
+            ultimo_payment_id: String(paymentId),
+          })
           .eq('user_id', userId)
       } else {
         await supabaseAdmin
           .from('configuracoes')
-          .insert({ user_id: userId, trial_ends_at: novoVencimento.toISOString() })
+          .insert({
+            user_id: userId,
+            trial_ends_at: novoVencimento.toISOString(),
+            ultimo_payment_id: String(paymentId),
+          })
       }
     }
 
